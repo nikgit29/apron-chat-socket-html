@@ -1,0 +1,276 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>Socket.IO Chat with Friend List</title>
+  <script src="https://cdn.socket.io/4.7.2/socket.io.min.js"></script>
+  <style>
+    body {
+      display: flex;
+      font-family: Arial, sans-serif;
+      margin: 0;
+    }
+    .sidebar {
+      width: 250px;
+      background: #f5f5f5;
+      border-right: 1px solid #ddd;
+      padding: 10px;
+      height: 100vh;
+      overflow-y: auto;
+    }
+    .friend {
+      display: flex;
+      align-items: center;
+      padding: 8px;
+      cursor: pointer;
+    }
+    .friend:hover {
+      background: #ddd;
+    }
+    .dot {
+      width: 10px;
+      height: 10px;
+      border-radius: 50%;
+      margin-right: 8px;
+    }
+    .dot.online {
+      background: green;
+    }
+    .dot.offline {
+      background: red;
+    }
+    .chat {
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+      padding: 10px;
+    }
+    .messages {
+      flex: 1;
+      border: 1px solid #ddd;
+      margin-bottom: 10px;
+      padding: 10px;
+      overflow-y: auto;
+      display: flex;
+      flex-direction: column;
+    }
+    .message {
+      max-width: 60%;
+      margin: 5px 0;
+      padding: 8px;
+      border-radius: 8px;
+      display: inline-block;
+      position: relative;
+    }
+    .me {
+      background-color: #DCF8C6;
+      align-self: flex-end;
+      text-align: right;
+    }
+    .friendMsg {
+      background-color: #FFF;
+      align-self: flex-start;
+    }
+    .timestamp {
+      font-size: 10px;
+      color: gray;
+      margin-top: 2px;
+    }
+    .actions {
+      display: none;
+      position: absolute;
+      top: -18px;
+      right: 5px;
+      font-size: 10px;
+      background: white;
+      border: 1px solid #ccc;
+      border-radius: 4px;
+      padding: 2px 4px;
+      cursor: pointer;
+    }
+    .message:hover .actions {
+      display: inline-block;
+    }
+  </style>
+</head>
+<body>
+  <div class="sidebar">
+    <h3>Friends</h3>
+    <div id="friendList">Loading...</div>
+  </div>
+
+  <div class="chat">
+    <div class="messages" id="messages"></div>
+    <div>
+      <input type="text" id="messageInput" placeholder="Type your message..." style="width:80%">
+      <button onclick="sendMessage()">Send</button>
+    </div>
+  </div>
+
+  <script>
+    let token = localStorage.getItem("jwtToken");
+    if (!token) {
+      token = prompt("Enter your JWT token:");
+      if (token) localStorage.setItem("jwtToken", token);
+    }
+
+    const socket = io("http://localhost:2000", { auth: { token } });
+    let friends = [];
+    let selectedFriend = null;
+    let myUserId = null;
+
+    socket.on("connect", () => {
+      console.log("✅ Connected to server");
+
+      // Fetch friend list
+      fetch("http://localhost:2000/connections/friends", {
+        headers: { Authorization: `Bearer ${token}` }
+      })
+        .then(res => res.json())
+        .then(data => {
+          friends = data;
+          renderFriendList();
+          socket.emit("getOnlineStatuses");
+        });
+
+      // Decode JWT to know my userId
+      try {
+        const payload = JSON.parse(atob(token.split(".")[1]));
+        myUserId = payload.id;
+      } catch (e) {
+        console.error("Failed to decode JWT", e);
+      }
+    });
+
+    socket.on("userStatusChange", ({ userId, isOnline }) => {
+      const friend = friends.find(f => f._id === userId);
+      if (friend) {
+        friend.isOnline = isOnline;
+        renderFriendList();
+      }
+    });
+
+    socket.on("onlineStatuses", (statuses) => {
+      friends.forEach(friend => {
+        if (statuses[friend._id] !== undefined) {
+          friend.isOnline = statuses[friend._id];
+        }
+      });
+      renderFriendList();
+    });
+
+    socket.on("chatHistory", (chat) => {
+      const messagesDiv = document.getElementById("messages");
+      messagesDiv.innerHTML = "";
+      chat.forEach(msg => renderMessage(msg));
+    });
+
+    socket.on("newMessage", (msg) => {
+      if (selectedFriend && (msg.sender === selectedFriend._id || msg.sender._id === selectedFriend._id)) {
+        renderMessage(msg);
+      }
+    });
+
+    socket.on("messageUpdated", (msg) => {
+      const existing = document.getElementById(`msg-${msg._id}`);
+      if (existing) {
+        existing.querySelector(".bubble").innerText = msg.content + " (edited)";
+      }
+    });
+
+    socket.on("messageDeleted", ({ messageId }) => {
+      const existing = document.getElementById(`msg-${messageId}`);
+      if (existing) {
+        existing.remove();
+      }
+    });
+
+    function renderFriendList() {
+      const container = document.getElementById("friendList");
+      container.innerHTML = "";
+
+      const logoutBtn = document.createElement("button");
+      logoutBtn.innerText = "Logout";
+      logoutBtn.style.marginBottom = "10px";
+      logoutBtn.onclick = logout;
+      container.appendChild(logoutBtn);
+
+      friends.forEach(friend => {
+        const div = document.createElement("div");
+        div.className = "friend";
+        div.onclick = () => selectFriend(friend);
+
+        const dot = document.createElement("div");
+        dot.className = `dot ${friend.isOnline ? "online" : "offline"}`;
+
+        const name = document.createElement("span");
+        name.innerText = friend.name || friend._id;
+
+        div.appendChild(dot);
+        div.appendChild(name);
+        container.appendChild(div);
+      });
+    }
+
+    function selectFriend(friend) {
+      selectedFriend = friend;
+      document.getElementById("messages").innerHTML = "";
+      socket.emit("getChatHistory", { friendId: friend._id });
+    }
+
+    function renderMessage(msg) {
+      const messagesDiv = document.getElementById("messages");
+      const wrapper = document.createElement("div");
+      wrapper.id = `msg-${msg._id}`;
+      wrapper.style.display = "flex";
+      wrapper.style.flexDirection = "column";
+      wrapper.style.alignItems = msg.sender === myUserId ? "flex-end" : "flex-start";
+
+      const bubble = document.createElement("div");
+      bubble.className = `message ${msg.sender === myUserId ? "me" : "friendMsg"}`;
+      bubble.innerHTML = `<span class="bubble">${msg.content}</span>`;
+
+      if (msg.sender === myUserId) {
+        const actions = document.createElement("span");
+        actions.className = "actions";
+        actions.innerText = "✏️ ✖";
+        actions.onclick = (e) => {
+          e.stopPropagation();
+          if (confirm("Edit this message?")) {
+            const newContent = prompt("Edit your message:", msg.content);
+            if (newContent) {
+              socket.emit("editMessage", { messageId: msg._id, newContent });
+            }
+          } else if (confirm("Delete this message?")) {
+            socket.emit("deleteMessage", { messageId: msg._id });
+          }
+        };
+        bubble.appendChild(actions);
+      }
+
+      const ts = document.createElement("span");
+      ts.className = "timestamp";
+      ts.innerText = new Date(msg.createdAt).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" });
+
+      wrapper.appendChild(bubble);
+      wrapper.appendChild(ts);
+      messagesDiv.appendChild(wrapper);
+      messagesDiv.scrollTop = messagesDiv.scrollHeight;
+    }
+
+    function sendMessage() {
+      if (!selectedFriend) return alert("Select a friend first");
+      const content = document.getElementById("messageInput").value;
+      if (!content) return;
+      socket.emit("sendMessage", { receiverId: selectedFriend._id, content });
+      renderMessage({ _id: Date.now(), sender: myUserId, content, createdAt: new Date() });
+      document.getElementById("messageInput").value = "";
+    }
+
+    function logout() {
+      localStorage.removeItem("jwtToken");
+      window.location.reload();
+    }
+  </script>
+</body>
+</html>
