@@ -230,8 +230,19 @@
     });
 
     socket.on("newMessage", (msg) => {
+      // Render in open chat if this is the selected friend
       if (selectedFriend && (msg.sender === selectedFriend._id || msg.sender._id === selectedFriend._id)) {
         renderMessage(msg);
+      }
+
+      // ✅ Update sidebar last message & time dynamically
+      const friendToUpdate = friends.find(f => 
+        f._id === (msg.sender._id || msg.sender) || f._id === (msg.receiver._id || msg.receiver)
+      );
+      if (friendToUpdate) {
+        friendToUpdate.lastMessage = msg.content;
+        friendToUpdate.lastMessageTime = msg.createdAt || new Date().toISOString();
+        renderFriendList();
       }
     });
 
@@ -271,7 +282,7 @@
 
         const message = document.createElement("span");
         message.className = "friend-message";
-        message.innerText = friend.lastMessage || "";
+        message.innerText = friend.lastMessage ? friend.lastMessage : "";
 
         top.appendChild(name);
         top.appendChild(time);
@@ -332,8 +343,24 @@
       if (!selectedFriend) return alert("Select a friend first");
       const content = document.getElementById("messageInput").value;
       if (!content) return;
-      socket.emit("sendMessage", { receiverId: selectedFriend._id, content });
-      renderMessage({ _id: Date.now(), sender: myUserId, isSender: true, content, createdAt: new Date() });
+      const msg = { receiverId: selectedFriend._id, content };
+      socket.emit("sendMessage", msg);
+
+      // Locally render message & update sidebar immediately
+      const newMsg = { 
+        _id: Date.now(), 
+        sender: myUserId, 
+        isSender: true, 
+        content, 
+        createdAt: new Date() 
+      };
+      renderMessage(newMsg);
+
+      // ✅ Also update friend list instantly
+      selectedFriend.lastMessage = content;
+      selectedFriend.lastMessageTime = newMsg.createdAt;
+      renderFriendList();
+
       document.getElementById("messageInput").value = "";
     }
 
