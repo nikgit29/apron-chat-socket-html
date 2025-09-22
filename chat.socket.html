@@ -183,7 +183,7 @@
     socket.on("connect", () => {
       console.log("✅ Connected to server");
 
-      fetch("http://localhost:2000/connections/friends", {
+      fetch("http://localhost:2000/messages/friends/list", {
         headers: { Authorization: `Bearer ${token}` }
       })
         .then(res => res.json())
