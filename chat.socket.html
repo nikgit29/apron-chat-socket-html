@@ -45,7 +45,7 @@
     <div class="messages" id="messages"></div>
     <div style="padding: 10px; border-top: 1px solid #ddd;">
       <input type="text" id="messageInput" placeholder="Type your message..." style="width:50%">
-      <input type="file" id="fileInput">
+      <input type="file" id="fileInput" multiple>
       <button onclick="sendMessage()">Send</button>
       <div id="filePreview" class="preview-container"></div>
     </div>
@@ -200,19 +200,23 @@
       bubble.className = `message ${msg.isSender ? "me" : "friendMsg"}`;
       bubble.innerHTML = `<span class="bubble">${msg.content || ""}</span>`;
 
-      if (msg.file?.path) {
-        const isImage = msg.file.type && msg.file.type.startsWith("image");
-        const attachment = document.createElement(isImage ? "img" : "a");
-        if (isImage) {
-          attachment.src = msg.file.path;
-        } else {
-          attachment.href = msg.file.path;
-          attachment.innerText = `📎 ${msg.file.filename || "Download file"}`;
-          attachment.target = "_blank";
-        }
-        attachment.className = "attachment-preview";
-        bubble.appendChild(attachment);
+      if (msg.files && msg.files.length > 0) {
+        msg.files.forEach(file => {
+          let attachment;
+          if (file.type.startsWith("image")) {
+            attachment = document.createElement("img");
+            attachment.src = file.path;
+          } else {
+            attachment = document.createElement("a");
+            attachment.href = file.path;
+            attachment.target = "_blank";
+            attachment.innerText = `📎 ${file.filename || "Download file"}`;
+          }
+          attachment.className = "attachment-preview";
+          bubble.appendChild(attachment);
+        });
       }
+
 
       const ts = document.createElement("span");
       ts.className = "timestamp";
@@ -228,39 +232,39 @@
     const filePreview = document.getElementById("filePreview");
     fileInput.addEventListener("change", () => {
       filePreview.innerHTML = "";
-      const file = fileInput.files[0];
-      if (!file) return;
-      let previewEl;
-      if (file.type.startsWith("image")) {
-        previewEl = document.createElement("img");
-        previewEl.src = URL.createObjectURL(file);
-      } else {
-        previewEl = document.createElement("span");
-        previewEl.innerText = `📎 ${file.name}`;
-      }
-      previewEl.className = "attachment-preview";
-      filePreview.appendChild(previewEl);
+       Array.from(fileInput.files).forEach(file => {
+        let previewEl;
+        if (file.type.startsWith("image")) {
+          previewEl = document.createElement("img");
+          previewEl.src = URL.createObjectURL(file);
+        } else {
+          previewEl = document.createElement("span");
+          previewEl.innerText = `📎 ${file.name}`;
+        }
+        previewEl.className = "attachment-preview";
+        filePreview.appendChild(previewEl);
+      });
     });
 
     async function sendMessage() {
       if (!selectedFriend) return alert("Select a friend first");
       const content = document.getElementById("messageInput").value;
-      const file = fileInput.files[0];
-      if (!content && !file) return alert("Type message or select a file");
+      const files = Array.from(fileInput.files);
+      if (!content && files.length === 0) return alert("Type message or select file(s)");
 
-      let filePayload = null;
-      if (file) {
+      let filePayload = [];
+      for (let file of files) {
         const base64 = await fileToBase64(file);
-        filePayload = { path: base64, filename: file.name, type: file.type };
+        filePayload.push({ path: base64, filename: file.name, type: file.type });
       }
 
-      const msg = { receiverId: selectedFriend._id, content, file: filePayload };
+      const msg = { receiverId: selectedFriend._id, content, files: filePayload };
       socket.emit("sendMessage", msg);
 
-      const newMsg = { _id: Date.now(), sender: myUserId, isSender: true, content, file: filePayload, createdAt: new Date() };
+      const newMsg = { _id: Date.now(), sender: myUserId, isSender: true, content, files: filePayload, createdAt: new Date() };
       renderMessage(newMsg);
 
-      selectedFriend.lastMessage = content || (file ? file.name : "");
+      selectedFriend.lastMessage = content || (files.length > 0 ? "📎 File(s) sent" : "");
       selectedFriend.lastMessageTime = newMsg.createdAt;
       renderFriendList();
 
