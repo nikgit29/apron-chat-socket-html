@@ -5,150 +5,31 @@
   <title>Socket.IO Chat with Friend List</title>
   <script src="https://cdn.socket.io/4.7.2/socket.io.min.js"></script>
   <style>
-    body {
-      display: flex;
-      font-family: Arial, sans-serif;
-      margin: 0;
-    }
-    .sidebar {
-      width: 280px;
-      background: #fafafa;
-      border-right: 1px solid #ddd;
-      padding: 10px;
-      height: 100vh;
-      overflow-y: auto;
-      display: flex;
-      flex-direction: column;
-    }
-    .sidebar h3 {
-      margin: 0 0 10px;
-      font-size: 18px;
-      color: #333;
-    }
-    .friend {
-      display: flex;
-      align-items: center;
-      gap: 10px;
-      padding: 10px;
-      margin-bottom: 8px;
-      background: #fff;
-      border-radius: 10px;
-      box-shadow: 0 1px 3px rgba(0,0,0,0.1);
-      cursor: pointer;
-      transition: background 0.2s ease, transform 0.1s ease;
-    }
-    .friend:hover {
-      background: #f0f0f0;
-      transform: scale(1.02);
-    }
-    .dot {
-      width: 10px;
-      height: 10px;
-      border-radius: 50%;
-      flex-shrink: 0;
-    }
-    .dot.online {
-      background: #4CAF50;
-    }
-    .dot.offline {
-      background: #bbb;
-    }
-    .friend-info {
-      display: flex;
-      flex-direction: column;
-      flex: 1;
-      overflow: hidden;
-    }
-    .friend-top {
-      display: flex;
-      justify-content: space-between;
-      align-items: center;
-    }
-    .friend-name {
-      font-weight: bold;
-      font-size: 14px;
-      color: #333;
-      white-space: nowrap;
-      overflow: hidden;
-      text-overflow: ellipsis;
-    }
-    .friend-time {
-      font-size: 11px;
-      color: gray;
-      flex-shrink: 0;
-    }
-    .friend-message {
-      font-size: 13px;
-      color: #666;
-      white-space: nowrap;
-      overflow: hidden;
-      text-overflow: ellipsis;
-      margin-top: 2px;
-    }
-    .chat {
-      flex: 1;
-      display: flex;
-      flex-direction: column;
-      padding: 0;
-      height: 100vh;
-    }
-    .chat-header {
-      display: flex;
-      align-items: center;
-      padding: 10px;
-      background: #f7f7f7;
-      border-bottom: 1px solid #ddd;
-      gap: 10px;
-    }
-    .chat-header .name {
-      font-weight: bold;
-      font-size: 16px;
-    }
-    .messages {
-      flex: 1;
-      border: none;
-      padding: 10px;
-      overflow-y: auto;
-      display: flex;
-      flex-direction: column;
-      background: #fff;
-    }
-    .message {
-      max-width: 60%;
-      margin: 5px 0;
-      padding: 8px;
-      border-radius: 8px;
-      display: inline-block;
-      position: relative;
-    }
-    .me {
-      background-color: #DCF8C6;
-      align-self: flex-end;
-      text-align: right;
-    }
-    .friendMsg {
-      background-color: #FFF;
-      align-self: flex-start;
-    }
-    .timestamp {
-      font-size: 10px;
-      color: gray;
-      margin-top: 2px;
-    }
-    .logout-btn {
-      margin-bottom: 10px;
-      padding: 8px;
-      border: none;
-      border-radius: 8px;
-      background: #e74c3c;
-      color: white;
-      cursor: pointer;
-      font-weight: bold;
-      transition: background 0.2s ease;
-    }
-    .logout-btn:hover {
-      background: #c0392b;
-    }
+    body { display: flex; font-family: Arial, sans-serif; margin: 0; }
+    .sidebar { width: 280px; background: #fafafa; border-right: 1px solid #ddd; padding: 10px; height: 100vh; overflow-y: auto; display: flex; flex-direction: column; }
+    .sidebar h3 { margin: 0 0 10px; font-size: 18px; color: #333; }
+    .friend { display: flex; align-items: center; gap: 10px; padding: 10px; margin-bottom: 8px; background: #fff; border-radius: 10px; box-shadow: 0 1px 3px rgba(0,0,0,0.1); cursor: pointer; transition: background 0.2s ease, transform 0.1s ease; }
+    .friend:hover { background: #f0f0f0; transform: scale(1.02); }
+    .dot { width: 10px; height: 10px; border-radius: 50%; flex-shrink: 0; }
+    .dot.online { background: #4CAF50; }
+    .dot.offline { background: #bbb; }
+    .friend-info { display: flex; flex-direction: column; flex: 1; overflow: hidden; }
+    .friend-top { display: flex; justify-content: space-between; align-items: center; }
+    .friend-name { font-weight: bold; font-size: 14px; color: #333; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+    .friend-time { font-size: 11px; color: gray; flex-shrink: 0; }
+    .friend-message { font-size: 13px; color: #666; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; margin-top: 2px; }
+    .chat { flex: 1; display: flex; flex-direction: column; padding: 0; height: 100vh; }
+    .chat-header { display: flex; align-items: center; padding: 10px; background: #f7f7f7; border-bottom: 1px solid #ddd; gap: 10px; }
+    .chat-header .name { font-weight: bold; font-size: 16px; }
+    .messages { flex: 1; border: none; padding: 10px; overflow-y: auto; display: flex; flex-direction: column; background: #fff; }
+    .message { max-width: 60%; margin: 5px 0; padding: 8px; border-radius: 8px; display: inline-block; position: relative; }
+    .me { background-color: #DCF8C6; align-self: flex-end; text-align: right; }
+    .friendMsg { background-color: #FFF; align-self: flex-start; }
+    .timestamp { font-size: 10px; color: gray; margin-top: 2px; }
+    .logout-btn { margin-bottom: 10px; padding: 8px; border: none; border-radius: 8px; background: #e74c3c; color: white; cursor: pointer; font-weight: bold; transition: background 0.2s ease; }
+    .logout-btn:hover { background: #c0392b; }
+    .attachment-preview { max-width: 200px; margin-top: 5px; border-radius: 5px; display: block; }
+    .preview-container { margin-top: 5px; display: flex; align-items: center; gap: 10px; }
   </style>
 </head>
 <body>
@@ -163,8 +44,10 @@
     </div>
     <div class="messages" id="messages"></div>
     <div style="padding: 10px; border-top: 1px solid #ddd;">
-      <input type="text" id="messageInput" placeholder="Type your message..." style="width:80%">
+      <input type="text" id="messageInput" placeholder="Type your message..." style="width:50%">
+      <input type="file" id="fileInput">
       <button onclick="sendMessage()">Send</button>
+      <div id="filePreview" class="preview-container"></div>
     </div>
   </div>
 
@@ -176,16 +59,11 @@
     }
 
     const socket = io("http://localhost:2000", { auth: { token } });
-    let friends = [];
-    let selectedFriend = null;
-    let myUserId = null;
+    let friends = [], selectedFriend = null, myUserId = null;
 
     socket.on("connect", () => {
       console.log("✅ Connected to server");
-
-      fetch("http://localhost:2000/messages/friends/list", {
-        headers: { Authorization: `Bearer ${token}` }
-      })
+      fetch("http://localhost:2000/messages/friends/list", { headers: { Authorization: `Bearer ${token}` } })
         .then(res => res.json())
         .then(data => {
           friends = data;
@@ -230,17 +108,14 @@
     });
 
     socket.on("newMessage", (msg) => {
-      // Render in open chat if this is the selected friend
       if (selectedFriend && (msg.sender === selectedFriend._id || msg.sender._id === selectedFriend._id)) {
         renderMessage(msg);
       }
-
-      // ✅ Update sidebar last message & time dynamically
-      const friendToUpdate = friends.find(f => 
+      const friendToUpdate = friends.find(f =>
         f._id === (msg.sender._id || msg.sender) || f._id === (msg.receiver._id || msg.receiver)
       );
       if (friendToUpdate) {
-        friendToUpdate.lastMessage = msg.content;
+        friendToUpdate.lastMessage = msg.content || (msg.file ? msg.file.filename : "");
         friendToUpdate.lastMessageTime = msg.createdAt || new Date().toISOString();
         renderFriendList();
       }
@@ -249,7 +124,6 @@
     function renderFriendList() {
       const container = document.getElementById("friendList");
       container.innerHTML = "";
-
       const logoutBtn = document.createElement("button");
       logoutBtn.innerText = "Logout";
       logoutBtn.className = "logout-btn";
@@ -282,7 +156,7 @@
 
         const message = document.createElement("span");
         message.className = "friend-message";
-        message.innerText = friend.lastMessage ? friend.lastMessage : "";
+        message.innerText = friend.lastMessage || "";
 
         top.appendChild(name);
         top.appendChild(time);
@@ -298,15 +172,12 @@
     function updateChatHeader(name, isOnline) {
       const header = document.getElementById("chatHeader");
       header.innerHTML = "";
-
       const dot = document.createElement("div");
       dot.className = `dot ${isOnline ? "online" : "offline"}`;
       dot.style.marginRight = "5px";
-
       const nameSpan = document.createElement("span");
       nameSpan.className = "name";
       nameSpan.innerText = name;
-
       header.appendChild(dot);
       header.appendChild(nameSpan);
     }
@@ -327,7 +198,21 @@
 
       const bubble = document.createElement("div");
       bubble.className = `message ${msg.isSender ? "me" : "friendMsg"}`;
-      bubble.innerHTML = `<span class="bubble">${msg.content}</span>`;
+      bubble.innerHTML = `<span class="bubble">${msg.content || ""}</span>`;
+
+      if (msg.file?.path) {
+        const isImage = msg.file.type && msg.file.type.startsWith("image");
+        const attachment = document.createElement(isImage ? "img" : "a");
+        if (isImage) {
+          attachment.src = msg.file.path;
+        } else {
+          attachment.href = msg.file.path;
+          attachment.innerText = `📎 ${msg.file.filename || "Download file"}`;
+          attachment.target = "_blank";
+        }
+        attachment.className = "attachment-preview";
+        bubble.appendChild(attachment);
+      }
 
       const ts = document.createElement("span");
       ts.className = "timestamp";
@@ -339,35 +224,61 @@
       messagesDiv.scrollTop = messagesDiv.scrollHeight;
     }
 
-    function sendMessage() {
+    const fileInput = document.getElementById("fileInput");
+    const filePreview = document.getElementById("filePreview");
+    fileInput.addEventListener("change", () => {
+      filePreview.innerHTML = "";
+      const file = fileInput.files[0];
+      if (!file) return;
+      let previewEl;
+      if (file.type.startsWith("image")) {
+        previewEl = document.createElement("img");
+        previewEl.src = URL.createObjectURL(file);
+      } else {
+        previewEl = document.createElement("span");
+        previewEl.innerText = `📎 ${file.name}`;
+      }
+      previewEl.className = "attachment-preview";
+      filePreview.appendChild(previewEl);
+    });
+
+    async function sendMessage() {
       if (!selectedFriend) return alert("Select a friend first");
       const content = document.getElementById("messageInput").value;
-      if (!content) return;
-      const msg = { receiverId: selectedFriend._id, content };
+      const file = fileInput.files[0];
+      if (!content && !file) return alert("Type message or select a file");
+
+      let filePayload = null;
+      if (file) {
+        const base64 = await fileToBase64(file);
+        filePayload = { path: base64, filename: file.name, type: file.type };
+      }
+
+      const msg = { receiverId: selectedFriend._id, content, file: filePayload };
       socket.emit("sendMessage", msg);
 
-      // Locally render message & update sidebar immediately
-      const newMsg = { 
-        _id: Date.now(), 
-        sender: myUserId, 
-        isSender: true, 
-        content, 
-        createdAt: new Date() 
-      };
+      const newMsg = { _id: Date.now(), sender: myUserId, isSender: true, content, file: filePayload, createdAt: new Date() };
       renderMessage(newMsg);
 
-      // ✅ Also update friend list instantly
-      selectedFriend.lastMessage = content;
+      selectedFriend.lastMessage = content || (file ? file.name : "");
       selectedFriend.lastMessageTime = newMsg.createdAt;
       renderFriendList();
 
       document.getElementById("messageInput").value = "";
+      fileInput.value = "";
+      filePreview.innerHTML = "";
     }
 
-    function logout() {
-      localStorage.removeItem("jwtToken");
-      window.location.reload();
+    function fileToBase64(file) {
+      return new Promise((resolve, reject) => {
+        const reader = new FileReader();
+        reader.onload = () => resolve(reader.result.split(",")[1]);
+        reader.onerror = err => reject(err);
+        reader.readAsDataURL(file);
+      });
     }
+
+    function logout() { localStorage.removeItem("jwtToken"); window.location.reload(); }
   </script>
 </body>
 </html>
