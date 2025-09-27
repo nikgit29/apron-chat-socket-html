@@ -205,7 +205,7 @@
           let attachment;
           if (file.type.startsWith("image")) {
             attachment = document.createElement("img");
-            attachment.src = file.path;
+            attachment.src = file.preview || file.path;
           } else {
             attachment = document.createElement("a");
             attachment.href = file.path;
@@ -246,6 +246,27 @@
       });
     });
 
+    // Listen for messageSent from backend to update sender's chat
+    socket.on("messageSent", (msg) => {
+      
+      const tempMsg = document.getElementById(tempId);
+      if (tempMsg) tempMsg.remove();
+
+      if (selectedFriend && msg.receiver === selectedFriend._id) {
+        // Render message from backend (with correct _id and file paths)
+        renderMessage({ ...msg, isSender: true });
+      }
+
+      // Update last message in friend list
+      const friendToUpdate = friends.find(f => f._id === msg.receiver);
+      if (friendToUpdate) {
+        friendToUpdate.lastMessage = msg.content || (msg.files && msg.files.length > 0 ? "📎 File(s) sent" : "");
+        friendToUpdate.lastMessageTime = msg.createdAt || new Date().toISOString();
+        renderFriendList();
+      }
+    });
+
+
     async function sendMessage() {
       if (!selectedFriend) return alert("Select a friend first");
       const content = document.getElementById("messageInput").value;
@@ -255,13 +276,15 @@
       let filePayload = [];
       for (let file of files) {
         const base64 = await fileToBase64(file);
-        filePayload.push({ path: base64, filename: file.name, type: file.type });
+        filePayload.push({ path: base64, preview: `data:${file.type};base64,${base64}`, filename: file.name, type: file.type });
       }
 
       const msg = { receiverId: selectedFriend._id, content, files: filePayload };
       socket.emit("sendMessage", msg);
 
-      const newMsg = { _id: Date.now(), sender: myUserId, isSender: true, content, files: filePayload, createdAt: new Date() };
+      let tempId = `msg-temp-${Date.now()}`;
+
+      const newMsg = { _id: tempId, sender: myUserId, isSender: true, content, files: filePayload, createdAt: new Date() };
       renderMessage(newMsg);
 
       selectedFriend.lastMessage = content || (files.length > 0 ? "📎 File(s) sent" : "");
